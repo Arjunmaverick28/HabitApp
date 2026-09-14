@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit Tracker</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --card-border: #262a33;
+    --accent: #6ee7b7;
+    --accent-2: #60a5fa;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(circle at top, #1a1e27, var(--bg));
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 32px; }
+  header h1 {
+    font-size: 2rem;
+    margin: 0 0 6px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p { color: var(--muted); margin: 0; }
+
+  .add-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    padding: 16px;
+    border-radius: 14px;
+    margin-bottom: 28px;
+  }
+  .add-form input, .add-form select {
+    background: #0f1218;
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  .add-form input[name="name"] { flex: 2; min-width: 160px; }
+  .add-form input[name="description"] { flex: 3; min-width: 180px; }
+  .add-form button {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border: none;
+    color: #0f1115;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .add-form button:hover { opacity: 0.9; }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+  .habit-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .habit-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .habit-name { font-size: 1.1rem; font-weight: 600; margin: 0; }
+  .habit-desc { color: var(--muted); font-size: 0.85rem; margin: 0; }
+  .badge {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #0f1218;
+    border: 1px solid var(--card-border);
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .streaks { display: flex; gap: 18px; font-size: 0.85rem; color: var(--muted); }
+  .streaks b { color: var(--text); font-size: 1.1rem; display: block; }
+  .actions { display: flex; gap: 8px; margin-top: 4px; }
+  .actions button {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: #0f1218;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .actions button.complete { border-color: var(--accent); color: var(--accent); }
+  .actions button.delete { border-color: var(--danger); color: var(--danger); }
+  .actions button:hover { filter: brightness(1.2); }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔥 Habit Tracker</h1>
+    <p>Build streaks. Stay consistent. Data lives in-memory on the server.</p>
+  </header>
+
+  <form class="add-form" id="addForm">
+    <input type="text" name="name" placeholder="Habit name (e.g. Read 10 pages)" required maxlength="100">
+    <input type="text" name="description" placeholder="Description (optional)" maxlength="500">
+    <select name="frequency">
+      <option value="DAILY">Daily</option>
+      <option value="WEEKLY">Weekly</option>
+    </select>
+    <button type="submit">Add Habit</button>
+  </form>
+
+  <div class="grid" id="habitGrid"></div>
+  <div class="empty" id="emptyState" style="display:none;">No habits yet — add your first one above.</div>
+</div>
+
+<script>
+const API = '/api/habits';
+
+async function fetchHabits() {
+  const res = await fetch(API);
+  const habits = await res.json();
+  render(habits);
+}
+
+function render(habits) {
+  const grid = document.getElementById('habitGrid');
+  const empty = document.getElementById('emptyState');
+  grid.innerHTML = '';
+  empty.style.display = habits.length === 0 ? 'block' : 'none';
+
+  habits.forEach(h => {
+    const card = document.createElement('div');
+    card.className = 'habit-card';
+    card.innerHTML = `
+      <div class="habit-top">
+        <div>
+          <p class="habit-name">${escapeHtml(h.name)}</p>
+          ${h.description ? `<p class="habit-desc">${escapeHtml(h.description)}</p>` : ''}
+        </div>
+        <span class="badge">${h.frequency}</span>
+      </div>
+      <div class="streaks">
+        <div><b>${h.currentStreak}</b>current streak</div>
+        <div><b>${h.longestStreak}</b>longest streak</div>
+        <div><b>${h.completedDates.length}</b>total done</div>
+      </div>
+      <div class="actions">
+        <button class="complete" data-action="complete" data-id="${h.id}">✓ Mark today done</button>
+        <button data-action="stats" data-id="${h.id}">Stats</button>
+        <button class="delete" data-action="delete" data-id="${h.id}">Delete</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+document.getElementById('addForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const payload = {
+    name: form.name.value.trim(),
+    description: form.description.value.trim(),
+    frequency: form.frequency.value
+  };
+  if (!payload.name) return;
+
+  await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  form.reset();
+  fetchHabits();
+});
+
+document.getElementById('habitGrid').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+
+  if (action === 'complete') {
+    await fetch(`${API}/${id}/complete`, { method: 'POST' });
+    fetchHabits();
+  } else if (action === 'delete') {
+    if (confirm('Delete this habit?')) {
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      fetchHabits();
+    }
+  } else if (action === 'stats') {
+    const res = await fetch(`${API}/${id}/stats`);
+    const stats = await res.json();
+    alert(
+      `${stats.name}\n` +
+      `Total completions: ${stats.totalCompletions}\n` +
+      `Current streak: ${stats.currentStreak}\n` +
+      `Longest streak: ${stats.longestStreak}\n` +
+      `Last 7 days completion rate: ${stats.last7DaysCompletionRate}%`
+    );
+  }
+});
+
+fetchHabits();
+</script>
+</body>
+</html>
