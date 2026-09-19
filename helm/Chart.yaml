@@ -1,0 +1,6 @@
+apiVersion: v2
+name: habit-tracker
+description: Helm chart for HabitApp
+type: application
+version: 0.1.0
+appVersion: "1.0"
