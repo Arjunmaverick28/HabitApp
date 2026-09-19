@@ -1,6 +1,8 @@
 
 pipeline {
-    agent any
+    agent {
+        label 'linux-agent'
+    }
 
     options {
         disableConcurrentBuilds()
@@ -23,6 +25,9 @@ pipeline {
         stage('Verify Java and Maven') {
             steps {
                 sh '''
+                    echo "Running on:"
+                    hostname
+
                     echo "Java version:"
                     java -version
 
@@ -31,6 +36,9 @@ pipeline {
 
                     echo "Maven version:"
                     mvn -version
+
+                    echo "Docker version:"
+                    docker --version
                 '''
             }
         }
