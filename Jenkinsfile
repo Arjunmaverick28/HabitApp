@@ -8,6 +8,8 @@ pipeline {
     }
 
     environment {
+        JAVA_HOME = '/usr/lib/jvm/java-21-amazon-corretto.x86_64'
+        PATH = "${JAVA_HOME}/bin:/usr/local/bin:/usr/bin:/bin"
         DOCKER_IMAGE = 'arjunmaverick/habit-tracker:1.0'
     }
 
@@ -15,6 +17,21 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Verify Java and Maven') {
+            steps {
+                sh '''
+                    echo "Java version:"
+                    java -version
+
+                    echo "Java compiler:"
+                    javac -version
+
+                    echo "Maven version:"
+                    mvn -version
+                '''
             }
         }
 
@@ -29,9 +46,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build -t "$DOCKER_IMAGE" .
-                '''
+                sh 'docker build -t "$DOCKER_IMAGE" .'
             }
         }
 
@@ -50,7 +65,6 @@ pipeline {
                             docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
                         docker push "$DOCKER_IMAGE"
-
                         docker logout
                     '''
                 }
