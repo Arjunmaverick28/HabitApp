@@ -13,6 +13,8 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-21-amazon-corretto.x86_64'
         PATH = "${JAVA_HOME}/bin:/usr/local/bin:/usr/bin:/bin"
         DOCKER_IMAGE = 'arjunmaverick/habit-tracker:1.0'
+        SONAR_ORGANIZATION = 'arjunmaverick28'
+        SONAR_PROJECT_KEY = 'Arjunmaverick28_HabitApp'
     }
 
     stages {
@@ -49,6 +51,27 @@ pipeline {
                     export MAVEN_OPTS="-Xms64m -Xmx256m"
                     mvn -B clean package
                 '''
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'sonarcloud-token',
+                        variable: 'SONAR_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        export MAVEN_OPTS="-Xms64m -Xmx256m"
+
+                        mvn -B sonar:sonar \
+                            -Dsonar.organization="$SONAR_ORGANIZATION" \
+                            -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+                            -Dsonar.host.url="https://sonarcloud.io" \
+                            -Dsonar.token="$SONAR_TOKEN"
+                    '''
+                }
             }
         }
 
